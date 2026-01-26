@@ -1,0 +1,25 @@
+# 🎵 Playlist Romântica - Geovanna & Gustavo
+
+## Músicas configuradas (7 total):
+1. Music1.mp3 - Música 1
+2. Music2.mp3 - Música 2  
+3. Music3.mp3 - Música 3
+4. Music4.mp3 - Música 4
+5. Music5.mp3 - Música 5
+6. Music6.mp3 - Música 6
+7. Music7.mp3 - Música 7
+
+## 🎛️ Controles do Player:
+- ⏮️ **Anterior**: Volta para a música anterior
+- ▶️/⏸️ **Play/Pause**: Toca ou pausa a música atual
+- ⏭️ **Próxima**: Avança para a próxima música
+
+## 🔄 Funcionamento:
+- **Sempre inicia** pela Música 1 (Music1.mp3)
+- **Navegação circular**: Após a última música, volta para a primeira
+- **Controle total**: Pode avançar ou voltar a qualquer momento
+- **Indicador**: Mostra "X/7" (posição atual na playlist)
+
+## 📁 Arquivos necessários:
+Certifique-se de que todos os 7 arquivos MP3 estão nesta pasta com os nomes exatos:
+Music1.mp3, Music2.mp3, Music3.mp3, Music4.mp3, Music5.mp3, Music6.mp3, Music7.mp3
