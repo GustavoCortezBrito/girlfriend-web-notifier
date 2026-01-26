@@ -106,7 +106,7 @@ export default function ConfirmationModal({
                 <motion.button
                   className={`flex-1 py-4 px-6 text-white rounded-2xl font-semibold transition-all duration-200 ${color}`}
                   onClick={onConfirm}
-                  whileHover={{ scale: 1.02, brightness: 1.1 }}
+                  whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
                   <motion.span
