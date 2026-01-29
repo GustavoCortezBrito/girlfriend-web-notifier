@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backup dos Botões - Geovanna & Gustavo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        .button {
+            background: #4CAF50;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .button:hover {
+            background: #45a049;
+        }
+        .button.danger {
+            background: #f44336;
+        }
+        .button.danger:hover {
+            background: #da190b;
+        }
+        #output {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .hidden {
+            display: none;
+        }
+        .success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💕 Backup dos Botões Personalizados</h1>
+        <p>Esta página ajuda a fazer backup e restaurar os botões que a Geovanna criou.</p>
+        
+        <button class="button" onclick="exportButtons()">
+            📤 Fazer Backup dos Botões
+        </button>
+        
+        <button class="button" onclick="exportPhotos()">
+            📸 Fazer Backup das Fotos
+        </button>
+        
+        <div id="output" class="hidden"></div>
+        
+        <div id="import-section" class="hidden">
+            <h3>Restaurar Backup:</h3>
+            <textarea id="import-data" placeholder="Cole aqui o código do backup..." style="width: 100%; height: 100px; padding: 10px; border-radius: 5px; border: none; margin-bottom: 10px;"></textarea>
+            <button class="button" onclick="importButtons()">
+                📥 Restaurar Botões
+            </button>
+            <button class="button" onclick="importPhotos()">
+                📸 Restaurar Fotos
+            </button>
+        </div>
+        
+        <button class="button" onclick="showImportSection()">
+            🔄 Restaurar Backup
+        </button>
+        
+        <button class="button danger" onclick="clearAll()">
+            🗑️ Limpar Todos os Dados (CUIDADO!)
+        </button>
+    </div>
+
+    <script>
+        function exportButtons() {
+            const buttons = localStorage.getItem('custom-buttons');
+            const output = document.getElementById('output');
+            
+            if (buttons) {
+                const data = JSON.parse(buttons);
+                output.textContent = `BACKUP DOS BOTÕES (${new Date().toLocaleString()}):
+${JSON.stringify(data, null, 2)}
+
+CÓDIGO PARA RESTAURAR:
+${buttons}`;
+                output.className = 'success';
+                output.classList.remove('hidden');
+                alert('✅ Backup criado! Copie o código que apareceu abaixo e guarde em local seguro.');
+            } else {
+                output.textContent = 'Nenhum botão personalizado encontrado.';
+                output.classList.remove('hidden', 'success');
+                alert('⚠️ Nenhum botão personalizado foi encontrado.');
+            }
+        }
+        
+        function exportPhotos() {
+            const photos = localStorage.getItem('custom-photos');
+            const output = document.getElementById('output');
+            
+            if (photos) {
+                const data = JSON.parse(photos);
+                output.textContent = `BACKUP DAS FOTOS (${new Date().toLocaleString()}):
+${data.length} fotos encontradas
+
+CÓDIGO PARA RESTAURAR:
+${photos}`;
+                output.className = 'success';
+                output.classList.remove('hidden');
+                alert('✅ Backup das fotos criado! Copie o código que apareceu abaixo.');
+            } else {
+                output.textContent = 'Nenhuma foto personalizada encontrada.';
+                output.classList.remove('hidden', 'success');
+                alert('⚠️ Nenhuma foto personalizada foi encontrada.');
+            }
+        }
+        
+        function showImportSection() {
+            document.getElementById('import-section').classList.remove('hidden');
+        }
+        
+        function importButtons() {
+            const data = document.getElementById('import-data').value.trim();
+            
+            if (!data) {
+                alert('⚠️ Cole o código do backup primeiro!');
+                return;
+            }
+            
+            try {
+                const buttons = JSON.parse(data);
+                localStorage.setItem('custom-buttons', data);
+                alert('✅ Botões restaurados com sucesso! Recarregue a página do app.');
+            } catch (error) {
+                alert('❌ Código inválido! Verifique se copiou corretamente.');
+            }
+        }
+        
+        function importPhotos() {
+            const data = document.getElementById('import-data').value.trim();
+            
+            if (!data) {
+                alert('⚠️ Cole o código do backup primeiro!');
+                return;
+            }
+            
+            try {
+                const photos = JSON.parse(data);
+                localStorage.setItem('custom-photos', data);
+                alert('✅ Fotos restauradas com sucesso! Recarregue a página do app.');
+            } catch (error) {
+                alert('❌ Código inválido! Verifique se copiou corretamente.');
+            }
+        }
+        
+        function clearAll() {
+            if (confirm('⚠️ ATENÇÃO: Isso vai apagar TODOS os botões e fotos personalizadas! Tem certeza?')) {
+                if (confirm('🚨 ÚLTIMA CHANCE: Você tem certeza ABSOLUTA? Esta ação não pode ser desfeita!')) {
+                    localStorage.removeItem('custom-buttons');
+                    localStorage.removeItem('custom-photos');
+                    localStorage.removeItem('pending-messages');
+                    alert('🗑️ Todos os dados foram apagados. Recarregue a página.');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -6,15 +6,20 @@ import AnimatedButton from './components/AnimatedButton'
 import PendingMessages from './components/PendingMessages'
 import ConfirmationModal from './components/ConfirmationModal'
 import CreateButtonModal from './components/CreateButtonModal'
+import BackupModal from './components/BackupModal'
+import ProfileSelector from './components/ProfileSelector'
 
 export default function Home() {
   const [showSuccess, setShowSuccess] = useState(false)
   const [showError, setShowError] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [createButtonModalOpen, setCreateButtonModalOpen] = useState(false)
+  const [backupModalOpen, setBackupModalOpen] = useState(false)
   const [customButtons, setCustomButtons] = useState<any[]>([])
   const [showLoadingScreen, setShowLoadingScreen] = useState(true)
   const [showWelcomeScreen, setShowWelcomeScreen] = useState(true)
+  const [showProfileSelector, setShowProfileSelector] = useState(true)
+  const [currentProfile, setCurrentProfile] = useState<'geovanna' | 'gustavo' | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentSongIndex, setCurrentSongIndex] = useState(0)
   const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null)
@@ -41,7 +46,12 @@ export default function Home() {
     color: ''
   })
   
-  const girlfriendName = 'Geovanna' // Nome fixo - sem configuração!
+  const girlfriendName = currentProfile === 'geovanna' ? 'Geovanna' : 'Gustavo'
+  const partnerName = currentProfile === 'geovanna' ? 'Gustavo' : 'Geovanna'
+  
+  // Emails: cada pessoa envia para o email da outra
+  const targetEmail = currentProfile === 'geovanna' ? 'gujjbrito@gmail.com' : 'Gecesco94@gmail.com'
+  
   const relationshipStart = new Date('2025-11-01') // Data que começaram a ficar juntos
 
   // Fotos do casal para o carrossel (fixas + personalizadas)
@@ -93,8 +103,8 @@ export default function Home() {
       setCurrentPhotoIndex((prev) => (prev + 1) % couplePhotos.length)
     }, 4000)
     
-    // Carregar botões personalizados
-    const savedButtons = localStorage.getItem('custom-buttons')
+    // Carregar botões personalizados baseado no perfil
+    const savedButtons = localStorage.getItem(`custom-buttons-${currentProfile}`)
     if (savedButtons) {
       setCustomButtons(JSON.parse(savedButtons))
     }
@@ -133,6 +143,20 @@ export default function Home() {
       }
     }
   }, [])
+
+  // Função para selecionar perfil
+  const handleProfileSelect = (profile: 'geovanna' | 'gustavo') => {
+    setCurrentProfile(profile)
+    setShowProfileSelector(false)
+    
+    // Carregar dados específicos do perfil
+    const savedButtons = localStorage.getItem(`custom-buttons-${profile}`)
+    if (savedButtons) {
+      setCustomButtons(JSON.parse(savedButtons))
+    } else {
+      setCustomButtons([])
+    }
+  }
 
   // Função para iniciar o app após interação do usuário
   const startApp = async () => {
@@ -289,13 +313,13 @@ export default function Home() {
   const handleCreateButton = (newButton: any) => {
     const updatedButtons = [...customButtons, { ...newButton, id: Date.now() }]
     setCustomButtons(updatedButtons)
-    localStorage.setItem('custom-buttons', JSON.stringify(updatedButtons))
+    localStorage.setItem(`custom-buttons-${currentProfile}`, JSON.stringify(updatedButtons))
   }
 
   const handleDeleteButton = (buttonId: number) => {
     const updatedButtons = customButtons.filter(btn => btn.id !== buttonId)
     setCustomButtons(updatedButtons)
-    localStorage.setItem('custom-buttons', JSON.stringify(updatedButtons))
+    localStorage.setItem(`custom-buttons-${currentProfile}`, JSON.stringify(updatedButtons))
   }
 
   const handleAddPhoto = (file: File) => {
@@ -349,16 +373,21 @@ export default function Home() {
     setShowError(false)
 
     try {
-      // Método 1: FormSubmit (principal)
-      const success = await sendViaFormSubmit(title, message)
+      // Método 1: Nossa API (sem confirmação)
+      const apiSuccess = await sendViaAPI(title, message)
       
-      if (success) {
-        // Salvar no localStorage como backup
-        saveToLocalStorage(title, message)
+      if (apiSuccess) {
         return
       }
 
-      // Método 2: Fallback - Mailto (se FormSubmit falhar)
+      // Método 2: FormSubmit (com confirmação)
+      const formSubmitSuccess = await sendViaFormSubmit(title, message)
+      
+      if (formSubmitSuccess) {
+        return
+      }
+
+      // Método 3: Fallback - Mailto
       await sendViaMailto(title, message)
       
     } catch (error) {
@@ -374,23 +403,59 @@ export default function Home() {
     setConfirmationModal({ ...confirmationModal, isOpen: false })
   }
 
+  const sendViaAPI = async (title: string, message: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/send-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title,
+          message,
+          senderName: girlfriendName,
+          receiverName: partnerName,
+          targetEmail: targetEmail,
+          timestamp: new Date().toISOString()
+        })
+      })
+
+      const data = await response.json()
+      
+      if (data.success) {
+        // Salvar no localStorage como backup
+        saveToLocalStorage(title, message)
+        setShowSuccess(true)
+        setTimeout(() => setShowSuccess(false), 3000)
+        return true
+      }
+      
+      return false
+      
+    } catch (error) {
+      console.error('Erro na API:', error)
+      return false
+    }
+  }
+
   const sendViaFormSubmit = async (title: string, message: string): Promise<boolean> => {
     return new Promise((resolve) => {
       try {
         // Criar formulário para FormSubmit
         const form = document.createElement('form')
-        form.action = 'https://formsubmit.co/gujjbrito@gmail.com'
+        form.action = `https://formsubmit.co/${targetEmail}`
         form.method = 'POST'
         form.style.display = 'none'
         form.target = '_blank' // Abrir em nova aba para não sair do app
 
         // Campos do formulário
         const fields = {
-          '_subject': `💕 ${title} - Mensagem da ${girlfriendName}`,
+          '_subject': `💕 ${title} - Mensagem de ${girlfriendName} para ${partnerName}`,
           '_template': 'table',
           '_captcha': 'false',
           '_next': `${window.location.origin}?sent=true&method=formsubmit`,
-          'nome': girlfriendName,
+          'remetente': girlfriendName,
+          'destinatario': partnerName,
           'botao': title,
           'mensagem': message,
           'horario': new Date().toLocaleString('pt-BR'),
@@ -435,16 +500,17 @@ export default function Home() {
   }
 
   const sendViaMailto = async (title: string, message: string) => {
-    const subject = encodeURIComponent(`💕 ${title} - Mensagem da ${girlfriendName}`)
+    const subject = encodeURIComponent(`💕 ${title} - Mensagem de ${girlfriendName} para ${partnerName}`)
     const body = encodeURIComponent(
       `${message}\n\n` +
       `De: ${girlfriendName}\n` +
+      `Para: ${partnerName}\n` +
       `Horário: ${new Date().toLocaleString('pt-BR')}\n` +
       `Botão: ${title}\n\n` +
       `(Enviado via fallback - FormSubmit pode estar indisponível)`
     )
     
-    const mailtoUrl = `mailto:gujjbrito@gmail.com?subject=${subject}&body=${body}`
+    const mailtoUrl = `mailto:${targetEmail}?subject=${subject}&body=${body}`
     
     // Tentar abrir cliente de email
     window.location.href = mailtoUrl
@@ -463,7 +529,8 @@ export default function Home() {
         id: Date.now(),
         title,
         message,
-        girlfriendName: girlfriendName,
+        senderName: girlfriendName,
+        receiverName: partnerName,
         timestamp: new Date().toISOString(),
         sent: false
       }
@@ -477,68 +544,86 @@ export default function Home() {
 
   const buttons = [
     {
-      title: 'Precisamos Conversar Agora',
-      message: `Geovanna precisa falar com você AGORA. É importante! �`,
-      emoji: '�',
+      title: 'Eu te amo',
+      message: `${girlfriendName} quer que ${partnerName} saiba: EU TE AMO MUITO! 💖`,
+      emoji: '💖',
+      color: 'bg-pink-500',
+    },
+    {
+      title: 'Macaco',
+      message: `${girlfriendName} está chamando ${partnerName} de macaco! 🐒`,
+      emoji: '🐒',
+      color: 'bg-amber-500',
+    },
+    {
+      title: 'Estou Estressada',
+      message: `${girlfriendName} está ${currentProfile === 'geovanna' ? 'estressada' : 'estressado'} agora... 😤💢`,
+      emoji: '😤',
       color: 'bg-red-500',
     },
     {
+      title: 'Precisamos Conversar Agora',
+      message: `${girlfriendName} precisa falar com ${partnerName} AGORA. É importante! 🚨`,
+      emoji: '🚨',
+      color: 'bg-red-600',
+    },
+    {
       title: 'Precisamos Conversar Depois',
-      message: `Geovanna quer conversar com você, mas pode ser mais tarde. 💬`,
+      message: `${girlfriendName} quer conversar com ${partnerName}, mas pode ser mais tarde. 💬`,
       emoji: '💬',
       color: 'bg-orange-500',
     },
     {
       title: 'Estou Cansada',
-      message: `Geovanna está cansada hoje... precisa de um descanso. 😴`,
+      message: `${girlfriendName} está ${currentProfile === 'geovanna' ? 'cansada' : 'cansado'} hoje... precisa de um descanso. 😴`,
       emoji: '😴',
       color: 'bg-indigo-500',
     },
     {
       title: 'Estou de Boa',
-      message: `Geovanna está tranquila e de boa humor! 😊`,
+      message: `${girlfriendName} está ${currentProfile === 'geovanna' ? 'tranquila' : 'tranquilo'} e de bom humor! 😊`,
       emoji: '😊',
       color: 'bg-green-500',
     },
     {
       title: 'Quero Ir Embora',
-      message: `Geovanna quer ir embora desse lugar agora... 🚪`,
+      message: `${girlfriendName} quer ir embora desse lugar agora... 🚪`,
       emoji: '🚪',
       color: 'bg-gray-500',
     },
     {
       title: 'Estou com Saudade',
-      message: `Geovanna está com muita saudade de você, Gustavo... 💔`,
+      message: `${girlfriendName} está com muita saudade de ${partnerName}... 💔`,
       emoji: '💔',
       color: 'bg-purple-500',
     },
     {
       title: 'Quero Ficar Sozinha',
-      message: `Geovanna precisa de um tempo sozinha agora. 🤍`,
+      message: `${girlfriendName} precisa de um tempo ${currentProfile === 'geovanna' ? 'sozinha' : 'sozinho'} agora. 🤍`,
       emoji: '🤍',
       color: 'bg-slate-400',
     },
     {
       title: 'Está Tudo Certo?',
-      message: `Geovanna quer saber se está tudo bem com você, Gustavo. ❓`,
+      message: `${girlfriendName} quer saber se está tudo bem com ${partnerName}. ❓`,
       emoji: '❓',
       color: 'bg-blue-500',
     },
     {
       title: 'Estou com Ciúmes',
-      message: `Geovanna está com ciúmes... 😤`,
+      message: `${girlfriendName} está com ciúmes... 😤`,
       emoji: '😤',
       color: 'bg-yellow-500',
     },
     {
       title: 'Não Gostei Dessa Atitude',
-      message: `Geovanna não gostou de alguma coisa que aconteceu... 😠`,
+      message: `${girlfriendName} não gostou de alguma coisa que aconteceu... 😠`,
       emoji: '😠',
-      color: 'bg-red-600',
+      color: 'bg-red-700',
     },
     {
       title: 'Quero Carinho/Atenção',
-      message: `Geovanna está precisando de carinho e atenção sua... 🥺💕`,
+      message: `${girlfriendName} está precisando de carinho e atenção ${currentProfile === 'geovanna' ? 'sua' : 'dela'}... 🥺💕`,
       emoji: '🥺',
       color: 'bg-rose-500',
     },
@@ -549,9 +634,14 @@ export default function Home() {
 
   return (
     <>
-      {/* Tela de Boas-vindas - Primeira interação */}
+      {/* Seletor de Perfil - Primeira tela */}
+      {showProfileSelector && (
+        <ProfileSelector onSelectProfile={handleProfileSelect} />
+      )}
+
+      {/* Tela de Boas-vindas - Segunda tela */}
       <AnimatePresence>
-        {showWelcomeScreen && (
+        {showWelcomeScreen && !showProfileSelector && (
           <motion.div
             className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-pink-500 via-purple-600 to-indigo-700"
             initial={{ opacity: 1 }}
@@ -619,7 +709,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5, duration: 0.8 }}
               >
-                Olá, Geovanna! 💖
+                Olá, {girlfriendName}! 💖
               </motion.h1>
               
               <motion.p
@@ -720,7 +810,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3, duration: 0.6 }}
               >
-                Geovanna & Gustavo
+                {girlfriendName} & {partnerName}
               </motion.h1>
               
               <motion.div
@@ -751,7 +841,7 @@ export default function Home() {
       </AnimatePresence>
 
       {/* App Principal */}
-      {!showLoadingScreen && !showWelcomeScreen && (
+      {!showLoadingScreen && !showWelcomeScreen && !showProfileSelector && (
         <div className="min-h-screen relative pb-24 overflow-hidden">
       {/* Background com foto do casal - foco em 55% */}
       <div 
@@ -815,8 +905,22 @@ export default function Home() {
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
+              title="Criar novo botão"
             >
               <span className="text-xl drop-shadow-lg">➕</span>
+            </motion.button>
+            
+            <motion.button
+              className="bg-black/40 backdrop-blur-xl rounded-2xl p-2.5 shadow-xl border border-white/30 hover:bg-black/50 transition-all duration-300"
+              onClick={() => setBackupModalOpen(true)}
+              whileHover={{ scale: 1.05, rotate: 5 }}
+              whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.35 }}
+              title="Backup dos dados"
+            >
+              <span className="text-xl drop-shadow-lg">💾</span>
             </motion.button>
             
             <motion.button
@@ -827,6 +931,7 @@ export default function Home() {
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
+              title="Recarregar página"
             >
               <span className="text-xl drop-shadow-lg">🔄</span>
             </motion.button>
@@ -1222,7 +1327,7 @@ export default function Home() {
               
               {/* Info */}
               <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm">
-                Geovanna & Gustavo 💕
+                {girlfriendName} & {partnerName} 💕
               </div>
             </motion.div>
           </motion.div>
@@ -1247,6 +1352,13 @@ export default function Home() {
         onSave={handleCreateButton}
       />
 
+      {/* Backup Modal */}
+      <BackupModal
+        isOpen={backupModalOpen}
+        onClose={() => setBackupModalOpen(false)}
+        currentProfile={currentProfile}
+      />
+
       {/* Pending Messages */}
       <PendingMessages />
       </div>
@@ -1254,7 +1366,7 @@ export default function Home() {
       )}
 
       {/* Player de música fixo na parte inferior */}
-      {!showLoadingScreen && !showWelcomeScreen && (
+      {!showLoadingScreen && !showWelcomeScreen && !showProfileSelector && (
         <motion.div
           className="fixed bottom-0 left-0 right-0 z-40 bg-black/40 backdrop-blur-xl border-t border-white/30 shadow-2xl"
           initial={{ y: 100, opacity: 0 }}
